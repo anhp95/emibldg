@@ -1,7 +1,9 @@
 #%%
+import xml.etree.ElementTree as ET
+from shapely.geometry import Polygon
+
 from ns import GML_NS, BLDG_ATTRIB
 from mypath import LIST_GMLS
-import xml.etree.ElementTree as ET
 
 BLDG_NS = BLDG_ATTRIB()
 
@@ -63,16 +65,15 @@ class BldgPartObj:
         self.storey = 0
         self.details = {}
 
-        self.l0_coords = []
-        self.l1_coords = []
+        self.geometry = []
 
         self.tfa = 0
 
         self._extract_id()
         self._extract_usage()
-        self._extract_height()
         self._extract_storey()
         self._extract_details()
+        self._extract_geometry_height()
         # self._cal_tfa()
 
     def _extract_id(self):
@@ -81,15 +82,11 @@ class BldgPartObj:
     def _extract_usage(self):
 
         usage = self.bldg_part_obj.find(BLDG_NS.usage, GML_NS)
-        self.usage = usage.text if usage is not None else 0
-
-    def _extract_height(self):
-        h = self.bldg_part_obj.find(BLDG_NS.h, GML_NS)
-        self.h = h.text if h is not None else 0
+        self.usage = int(usage.text) if usage is not None else 0
 
     def _extract_storey(self):
         storey = self.bldg_part_obj.find(BLDG_NS.storey, GML_NS)
-        self.storey = storey.text if storey is not None else 0
+        self.storey = int(storey.text) if storey is not None else 0
 
     def _extract_details(self):
         details = self.bldg_part_obj.find(BLDG_NS.details, GML_NS)
@@ -97,10 +94,36 @@ class BldgPartObj:
         for child in details:
             self.details[child.tag.replace(self.uro_url, "")] = child.text
 
-    # def _extract_coords(self):
+    def _extract_geometry_height(self):
 
-    #     self.l0_coords = ""
-    #     self.l1_coords = ""
+        l0_coords = self.bldg_part_obj.find(BLDG_NS.l0_coords, GML_NS)
+        l1_coords = self.bldg_part_obj.findall(BLDG_NS.l1_coords, GML_NS)
+
+
+        h = self.bldg_part_obj.find(BLDG_NS.h, GML_NS)
+        self.h = (
+            float(h.text)
+            if h is not None
+            else (
+                float(l1_coords[-1].text.split(" ")[2])
+                - float(l0_coords.text.split(" ")[2])
+            )
+        )
+
+        lat = []
+        lon = []
+
+        l0_coords = [float(x) for x in l0_coords.text.split(" ")]
+
+        for i in range(0, len(l0_coords) - 3, 3):
+            lat.append(l0_coords[i])
+            lat.append(l0_coords[i + 1])
+
+        self.geometry = Polygon(zip(lon, lat))
+
+    def _extract_height(self):
+        h = self.bldg_part_obj.find(BLDG_NS.h, GML_NS)
+        self.h = float(h.text) if h is not None else 0
 
     # def cal_tfa(self):
     #     pass
