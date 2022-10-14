@@ -1,22 +1,22 @@
 ENCODING = "shift_jis"
 CEE_TRANS_COLS = [
     "mesh_code",
-    "Confidentiality total classification",
-    "total_mesh_code",
-    "water_supply",
-    "electricity_fee",
-    "gas_fee",
-    "city_gas",
-    "propane_gas",
-    "other_light_and_heat",
+    "confdc",
+    "mesh_t",
+    "lhw",
+    "e_f",
+    "g_f",
+    "g_shi",
+    "g_prop",
+    "other_lh",
     "kerosene",
-    "other_utilities",
-    "water_and_sewage_fee",
+    "others",
+    "w_s_f",
 ]
 
 NS = {
-        "bldg": "http://www.opengis.net/citygml/building/2.0",
-        "core": "http://www.opengis.net/citygml/2.0",
-        "gml": "http://www.opengis.net/gml",
-        "uro": "http://www.kantei.go.jp/jp/singi/tiiki/toshisaisei/itoshisaisei/iur/uro/1.4"
-        }
+    "bldg": "http://www.opengis.net/citygml/building/2.0",
+    "core": "http://www.opengis.net/citygml/2.0",
+    "gml": "http://www.opengis.net/gml",
+    "uro": "http://www.kantei.go.jp/jp/singi/tiiki/toshisaisei/itoshisaisei/iur/uro/1.4",
+}

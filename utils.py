@@ -14,6 +14,4 @@ def merge_csv_shp(shp_path, csv_path):
     merge_df = shp_df.merge(csv_df, on="mesh_code")
 
     return merge_df
-
-
 # %%
