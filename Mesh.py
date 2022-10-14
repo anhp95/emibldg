@@ -107,3 +107,4 @@ img = rasterio.open(tif)
 out_image, _ = mask(img, a.cee_df.iloc[0].geometry, crop=True)
 pyplot.imshow(out_image, cmap="pink")
 pyplot.show()
+# %%
