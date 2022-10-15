@@ -2,6 +2,8 @@
 import os
 import glob
 
+from pyproj import DataDirError
+
 
 def get_path_cee(year):
     csv_mesh_dir = rf"D:\Emission Data\Tanikawa-sensei data\takeuhi_pro\takeuhi_pro\消費支出推計メッシュデータ{year}"
@@ -24,4 +26,6 @@ CITY_BOUND_DIR = os.path.join(DATA_DIR, "bound")
 JP_CEE_DIR = os.path.join(DATA_DIR, "cee", "japan")
 TEMP_DIR = os.path.join(DATA_DIR, "temp", "japan")
 
+POP_SHP = os.path.join(DATA_DIR, "population", "japan", "500m_mesh_2018_23.shp")
+SHP_3D_DIR = os.path.join(DATA_DIR, "3d")
 # %%
