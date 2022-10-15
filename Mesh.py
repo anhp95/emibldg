@@ -123,9 +123,9 @@ class GridUnit:
 
     def _extract_bldg_attrib(self, cee_row, city_3d_df):
         pol = cee_row["geometry"]
-        grid_3d = city_3d_df[city_3d_df["geometry"].apply(pol.contains)].copy()
-        self.total_area = (grid_3d["h"] * grid_3d["l0_area"]).sum()
-        self.avg_height = grid_3d["h"].mean()
+        grid_3d_df = city_3d_df[city_3d_df["geometry"].apply(pol.contains)].copy()
+        self.total_area = (grid_3d_df["h"] * grid_3d_df["l0_area"]).sum()
+        self.avg_height = grid_3d_df["h"].mean()
         # self.grid_3d_df.append()
         # self.grid_3d_df = grid_3d_df
 
