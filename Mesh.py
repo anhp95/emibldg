@@ -6,8 +6,8 @@ import rasterio
 import numpy as np
 
 from rasterio.mask import mask
+import calendar
 
-from matplotlib import pyplot
 from mypath import *
 
 
@@ -25,12 +25,14 @@ class CeeCityMesh:
         self.city_3d_df = None
         self.list_temp_tif = []
 
-        self.grid = []
+        self.grid_unit = []
+        self.train = None
 
         self._extract_bound()
         self._clip_cee_df()
         self._get_ref_files()
         self._cal_grid_unit()
+        self.extract_train()
 
     def _extract_bound(self):
 
@@ -68,15 +70,32 @@ class CeeCityMesh:
 
     def _cal_grid_unit(self):
         for i in range(0, len(self.cee_df)):
-            self.grid.append(
+            self.grid_unit.append(
                 GridUnit(
                     self.cee_df.iloc[i],
                     self.city_3d_df,
                     self.list_temp_tif,
                     self.pop_df,
                     self.year,
-                )
+                ).grid_df
             )
+
+    def extract_train(self):
+        city_df = pd.concat(self.grid_unit, axis=0, ignore_index=True)
+        other_col_cal = {
+            "electric": "sum",
+            "city_gas": "sum",
+            "kerosene": "sum",
+            "propane": "sum",
+            "total_area": "sum",
+            "avg_height": "mean",
+            "rp_14": "mean",
+            "rp_1565": "mean",
+            "rp_75": "mean",
+        }
+        temp_col_cal = {calendar.month_name[i]: "mean" for i in range(1, 13)}
+        col_cal = other_col_cal | temp_col_cal
+        self.train = city_df.groupby("target_grid_id").agg(col_cal)
 
 
 class GridUnit:
@@ -86,6 +105,7 @@ class GridUnit:
         self.grid_id = 0
         self.target_grid_id = ""
         self.geometry = None
+
         self.electric = 0
         self.city_gas = 0
         self.kerosene = 0
@@ -95,7 +115,6 @@ class GridUnit:
 
         self.total_area = 0
         self.avg_height = 0
-        self.grid_3d_df = []
 
         self.temp = []
 
@@ -103,15 +122,22 @@ class GridUnit:
         self.rp_1565 = 0
         self.rp_75 = 0
 
+        self.grid_df = pd.DataFrame()
+
         self._extract_energy(cee_row)
         self._extract_bldg_attrib(cee_row, city_3d_df)
-        # self._extract_temp(cee_row, list_temp_tif)
-        # self._extract_pop(pop_df)
+        self._extract_temp(cee_row, list_temp_tif)
+        self._extract_pop(pop_df)
+        self._to_df()
 
     def _extract_energy(self, cee_row):
 
         self.grid_id = cee_row["mesh_code"]
-        self.target_grid_id = cee_row["mesh_t"]
+        self.target_grid_id = (
+            cee_row["mesh_t"]
+            if not pd.isna(cee_row["mesh_t"])
+            else cee_row["mesh_code"]
+        )
         self.electric = cee_row["e_f"]
         self.city_gas = cee_row["g_shi"]
         self.propane = cee_row["g_prop"]
@@ -126,20 +152,15 @@ class GridUnit:
         grid_3d_df = city_3d_df[city_3d_df["geometry"].apply(pol.contains)].copy()
         self.total_area = (grid_3d_df["h"] * grid_3d_df["l0_area"]).sum()
         self.avg_height = grid_3d_df["h"].mean()
-        # self.grid_3d_df.append()
-        # self.grid_3d_df = grid_3d_df
 
     def _extract_temp(self, cee_row, list_temp_tif):
-        # list_tif = sorted(glob.glob(os.path.join(TEMP_DIR, f"{self.year}*")))
 
         for img in list_temp_tif:
-            # img = rasterio.open(tif)
             out_img, _ = mask(img, [cee_row["geometry"]], crop=True)
             masked_zero = out_img[out_img > 0]
             self.temp.append(np.mean(masked_zero))
 
     def _extract_pop(self, pop_df):
-        # pop_df = gpd.read_file(POP_SHP)
         grid_pop_df = pop_df.loc[pop_df["MESH_ID"] == self.grid_id]
         self.rp_14 = grid_pop_df[f"RTA_{self.year}"].item()
         self.rp_1565 = grid_pop_df[f"RTB_{self.year}"].item()
@@ -149,15 +170,29 @@ class GridUnit:
             + grid_pop_df[f"RTE_{self.year}"].item()
         )
 
+    def _to_df(self):
+
+        self.grid_df["grid_id"] = [self.grid_id]
+        self.grid_df["target_grid_id"] = [self.target_grid_id]
+        self.grid_df["geometry"] = [self.geometry]
+
+        self.grid_df["electric"] = [self.electric]
+        self.grid_df["city_gas"] = [self.city_gas]
+        self.grid_df["kerosene"] = [self.kerosene]
+        self.grid_df["propane"] = [self.propane]
+
+        self.grid_df["co2"] = [self.co2]
+
+        self.grid_df["total_area"] = [self.total_area]
+        self.grid_df["avg_height"] = [self.avg_height]
+
+        for i in range(1, 13):
+            self.grid_df[calendar.month_name[i]] = [self.temp[i - 1]]
+
+        self.grid_df["rp_14"] = [self.rp_14]
+        self.grid_df["rp_1565"] = [self.rp_1565]
+        self.grid_df["rp_75"] = [self.rp_75]
+
 
 # %%
 a = CeeCityMesh("nagoya", 2020)
-# list_tif = sorted(glob.glob(os.path.join(TEMP_DIR, f"2020*")))
-# tif = list_tif[0]
-# img = rasterio.open(tif)
-# out_image, _ = mask(img, [a.cee_df.iloc[0].geometry], crop=True)
-# _, y, x = out_image.shape
-# out_image = out_image.reshape(x,y)
-# pyplot.imshow(out_image, cmap="pink")
-# pyplot.show()
-# %%
