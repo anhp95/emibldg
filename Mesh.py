@@ -4,9 +4,10 @@ import geopandas as gpd
 import os
 import rasterio
 import numpy as np
-
-from rasterio.mask import mask
 import calendar
+
+from sklearn.preprocessing import MinMaxScaler
+from rasterio.mask import mask
 
 from mypath import *
 
@@ -31,8 +32,9 @@ class CeeCityMesh:
         self._extract_bound()
         self._clip_cee_df()
         self._get_ref_files()
+
         self._cal_grid_unit()
-        self.extract_train()
+        self._extract_train()
 
     def _extract_bound(self):
 
@@ -80,7 +82,7 @@ class CeeCityMesh:
                 ).grid_df
             )
 
-    def extract_train(self):
+    def _extract_train(self):
         city_df = pd.concat(self.grid_unit, axis=0, ignore_index=True)
         other_col_cal = {
             "electric": "sum",
@@ -95,8 +97,49 @@ class CeeCityMesh:
         }
         temp_col_cal = {calendar.month_name[i]: "mean" for i in range(1, 13)}
         col_cal = other_col_cal | temp_col_cal
-        self.train = city_df.groupby("target_grid_id").agg(col_cal)
+        df_train = city_df.groupby("target_grid_id").agg(col_cal)
 
+        df_train = df_train[df_train["total_area"] >0]
+        df_train = df_train[df_train["January"]>0]
+        df_train = df_train[df_train["electric"]>0]
+
+        self.train = df_train
+    
+    def preprocess_train(self):
+        
+        cols = self.train.columns
+
+        scaler_x = MinMaxScaler()
+
+        scaler_e = MinMaxScaler()
+        scaler_gas = MinMaxScaler()
+        scaler_kerosene = MinMaxScaler()
+        scaler_propane = MinMaxScaler()
+
+        e = scaler_e.fit_transform(self.train["electric"].values.reshape(-1,1))
+        gas = scaler_gas.fit_transform(self.train["gcity_gas"].values.reshape(-1,1))
+        kerosene = scaler_kerosene.fit_transform(self.train["kerosene"].values.reshape(-1,1))
+        propane = scaler_propane.fit_transform(self.train["propane"].values.reshape(-1,1))
+
+        x = scaler_x.fit_transform(self.train[cols[4:]].values)
+
+        scaler_dict = {
+            "electric": scaler_e,
+            "gas": scaler_gas,
+            "kerosene": scaler_kerosene,
+            "propane": scaler_propane,
+            "x": scaler_x
+        }
+
+        data_dict = {
+            "electric": e,
+            "gas": gas,
+            "kerosene": kerosene,
+            "propane": propane,
+            "x": x,
+        }
+
+        return data_dict, scaler_dict
 
 class GridUnit:
     def __init__(self, cee_row, city_3d_df, list_temp_tif, pop_df, year) -> None:
